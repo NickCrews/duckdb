@@ -1,0 +1,64 @@
+# name: test/sql/types/enum/test_enum_array_qualified.test
+# description: Test schema-qualified enum types with arrays
+# group: [enum]
+
+statement ok
+PRAGMA enable_verification
+
+# Create schema and types
+statement ok
+CREATE SCHEMA my_schema;
+
+statement ok
+CREATE TYPE my_schema.my_type as ENUM ('a', 'b', 'c');
+
+statement ok
+CREATE TYPE other_type as ENUM ('x', 'y', 'z');
+
+# Test creating table with schema-qualified enum arrays
+statement ok
+CREATE TABLE my_schema.my_table (
+    my_type my_schema.my_type,
+    my_types my_schema.my_type[],
+    other_type other_type,
+    other_types other_type[]
+);
+
+# Insert some data
+statement ok
+INSERT INTO my_schema.my_table VALUES ('a', ['a', 'b'], 'x', ['x', 'y']);
+
+# Query the data
+query IIII
+SELECT * FROM my_schema.my_table;
+----
+a	[a, b]	x	[x, y]
+
+# Test with NULL arrays
+statement ok
+INSERT INTO my_schema.my_table VALUES ('b', NULL, 'y', NULL);
+
+query IIII
+SELECT * FROM my_schema.my_table ORDER BY my_type;
+----
+a	[a, b]	x	[x, y]
+b	NULL	y	NULL
+
+# Test array access
+query I
+SELECT my_types[1] FROM my_schema.my_table WHERE my_type = 'a';
+----
+a
+
+# Clean up
+statement ok
+DROP TABLE my_schema.my_table;
+
+statement ok
+DROP TYPE my_schema.my_type;
+
+statement ok
+DROP TYPE other_type;
+
+statement ok
+DROP SCHEMA my_schema;
