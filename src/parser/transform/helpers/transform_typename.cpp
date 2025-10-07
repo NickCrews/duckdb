@@ -77,6 +77,7 @@ LogicalType Transformer::TransformTypeName(duckdb_libpgquery::PGTypeName &type_n
 	}
 	auto stack_checker = StackCheck();
 
+	LogicalType result_type;
 	if (type_name.names->length > 1) {
 		// qualified typename
 		vector<string> names;
@@ -86,20 +87,20 @@ LogicalType Transformer::TransformTypeName(duckdb_libpgquery::PGTypeName &type_n
 		vector<Value> type_mods = TransformTypeModifiers(type_name);
 		switch (type_name.names->length) {
 		case 2:
-			return LogicalType::USER(INVALID_CATALOG, std::move(names[0]), std::move(names[1]), std::move(type_mods));
+			result_type = LogicalType::USER(INVALID_CATALOG, std::move(names[0]), std::move(names[1]), std::move(type_mods));
+			break;
 		case 3:
-			return LogicalType::USER(std::move(names[0]), std::move(names[1]), std::move(names[2]),
+			result_type = LogicalType::USER(std::move(names[0]), std::move(names[1]), std::move(names[2]),
 			                         std::move(type_mods));
+			break;
 		default:
 			throw ParserException(
 			    "Too many qualifications for type name - expected [catalog.schema.name] or [schema.name]");
 		}
-	}
-	auto name = PGPointerCast<duckdb_libpgquery::PGValue>(type_name.names->tail->data.ptr_value)->val.str;
-	// transform it to the SQL type
-	LogicalTypeId base_type = TransformStringToLogicalTypeId(name);
-
-	LogicalType result_type;
+	} else {
+		auto name = PGPointerCast<duckdb_libpgquery::PGValue>(type_name.names->tail->data.ptr_value)->val.str;
+		// transform it to the SQL type
+		LogicalTypeId base_type = TransformStringToLogicalTypeId(name);
 	if (base_type == LogicalTypeId::LIST) {
 		throw ParserException("LIST is not valid as a stand-alone type");
 	} else if (base_type == LogicalTypeId::ENUM) {
@@ -269,6 +270,7 @@ LogicalType Transformer::TransformTypeName(duckdb_libpgquery::PGTypeName &type_n
 			result_type = LogicalType(base_type);
 			break;
 		}
+	}
 	}
 	if (type_name.arrayBounds) {
 		// array bounds: turn the type into a list

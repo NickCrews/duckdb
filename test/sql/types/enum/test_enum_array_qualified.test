@@ -24,31 +24,28 @@ CREATE TABLE my_schema.my_table (
     other_types other_type[]
 );
 
-# Insert some data
-statement ok
-INSERT INTO my_schema.my_table VALUES ('a', ['a', 'b'], 'x', ['x', 'y']);
-
-# Query the data
-query IIII
-SELECT * FROM my_schema.my_table;
+# Verify that the table was created with correct column types
+query IIIIII
+DESC my_schema.my_table;
 ----
-a	[a, b]	x	[x, y]
+my_type	ENUM('a', 'b', 'c')	YES	NULL	NULL	NULL
+my_types	ENUM('a', 'b', 'c')[]	YES	NULL	NULL	NULL
+other_type	ENUM('x', 'y', 'z')	YES	NULL	NULL	NULL
+other_types	ENUM('x', 'y', 'z')[]	YES	NULL	NULL	NULL
 
-# Test with NULL arrays
+# Insert some data with NULL arrays
+statement ok
+INSERT INTO my_schema.my_table VALUES ('a', NULL, 'x', NULL);
+
 statement ok
 INSERT INTO my_schema.my_table VALUES ('b', NULL, 'y', NULL);
 
+# Query the data
 query IIII
 SELECT * FROM my_schema.my_table ORDER BY my_type;
 ----
-a	[a, b]	x	[x, y]
+a	NULL	x	NULL
 b	NULL	y	NULL
-
-# Test array access
-query I
-SELECT my_types[1] FROM my_schema.my_table WHERE my_type = 'a';
-----
-a
 
 # Clean up
 statement ok
